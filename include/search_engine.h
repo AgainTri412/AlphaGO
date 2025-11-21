@@ -31,7 +31,9 @@ public:
 
 private:
     // --- Core Search ---
+    // Returns score from the perspective of rootSideToMove at the start of the search
     EvalScore search(int depth, EvalScore alpha, EvalScore beta, int ply, bool allowNull, bool inPV);
+    // Returns score from the perspective of rootSideToMove at the start of the search
     EvalScore quiescence(EvalScore alpha, EvalScore beta, int ply);
     void iterativeDeepening();
 

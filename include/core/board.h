@@ -87,7 +87,7 @@ public:
 
     //Helper functions:
     Player getSideToMove() const;//Inspect current side (legacy alias; prefer sideToMove() in new code)
-    void setSideToMove(Player p);//Force a specific side to move; maintains the Zobrist hash key
+    void setSideToMove(Player p);//Force a specific side to move; maintains the Zobrist hash key. setup only, not for search
     bool placeStone(int x, int y, Player player);//Place a stone for a specific Player without toggling turn; maintains the Zobrist hash key
     bool removeStone(int x, int y, Player player);//Place a stone for a specific Player without toggling turn; maintains the Zobrist hash key
 

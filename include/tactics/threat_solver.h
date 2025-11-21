@@ -319,54 +319,54 @@ public:
      * @brief Check if a player currently has any *immediate* winning threat.
      *
      * An “immediate winning threat” is an existing Five or OpenFour on the
-     * board for @p player.
+     * board for @p attacker.
      *
-     * @param player Player to test.
+     * @param attacker Player to test.
      * @return true if player has a Five or OpenFour already on the board.
      */
-    bool hasImmediateWinningThreat(Player player) const;
+    bool hasImmediateWinningThreat(Player attacker) const;
 
     /**
      * @brief Collect all *forcing* threats currently available to a player.
      *
      * Forcing threats are:
-     *   - SimpleFour
-     *   - OpenThree
-     *   - BrokenThree
+     * - SimpleFour
+     * - OpenThree
+     * - BrokenThree
      *
-     * @param player Player for whom to collect threats.
-     * @param out    Vector that will be appended with all current forcing threats.
+     * @param attacker Player for whom to collect threats.
+     * @param out      Vector that will be appended with all current forcing threats.
      */
-    void collectCurrentForcingThreats(Player player,
+    void collectCurrentForcingThreats(Player attacker,
                                       std::vector<ThreatInstance>& out) const;
 
     /**
-     * @brief Get the threat type available to @p player at @p move in one direction.
+     * @brief Get the threat type available to @p attacker at @p move in one direction.
      *
      * Uses the solver’s internal threat board. If @p move is occupied or
      * no threat exists in that direction, ThreatType::None is returned.
      *
-     * @param player    Player to consider as attacker.
+     * @param attacker  Player to consider as attacker.
      * @param move      Empty intersection to test.
      * @param direction Direction in which to inspect threats.
      *
      * @return Threat type in that direction for this player and move.
      */
-    ThreatType getThreatAt(Player player,
+    ThreatType getThreatAt(Player attacker,
                            const Move& move,
                            Direction direction) const;
 
     /**
-     * @brief Get all four directional threat types at @p move for @p player.
+     * @brief Get all four directional threat types at @p move for @p attacker.
      *
      * Convenience helper for evaluation.
      *
-     * @param player Player to consider as attacker.
-     * @param move   Empty intersection to test.
-     * @param out    Vector of size 4 (one per Direction) to fill.
-     *               Existing contents will be overwritten.
+     * @param attacker Player to consider as attacker.
+     * @param move     Empty intersection to test.
+     * @param out      Vector of size 4 (one per Direction) to fill.
+     * Existing contents will be overwritten.
      */
-    void getThreatsAt(Player player,
+    void getThreatsAt(Player attacker,
                       const Move& move,
                       std::vector<ThreatType>& out) const;
 

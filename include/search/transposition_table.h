@@ -16,8 +16,8 @@ enum class TTNodeType : std::uint8_t {
 
 struct TTEntry {
     std::uint64_t key = 0;
-    EvalScore     value = 0;
-    EvalScore     eval = 0;
+    EvalScore     value = 0; // from the perspective of rootSideToMove at the start of the search
+    EvalScore     eval = 0;  // from the perspective of rootSideToMove at the start of the search
     int           depth = -1;
     TTNodeType    type = TTNodeType::Exact;
     Move          bestMove;
