@@ -13,7 +13,7 @@
 // Victor Allis style dependency-based threat search.
 //
 
-#include "threat_solver.h"
+#include "tactics/threat_solver.h"
 
 #include <algorithm>
 #include <cstring>
@@ -124,15 +124,10 @@ const ThreatSolver::PatternTable& ThreatSolver::PatternTable::instance() {
 // ThreatSolver::SearchContext
 //------------------------------------------------------------------------------
 
-struct ThreatSolver::SearchContext {
-    Board boardCopy;
-    Player attacker;
-    ThreatSearchLimits limits;
-    int nodes = 0;
-
-    SearchContext(const Board& root, Player a, const ThreatSearchLimits& lim)
-        : boardCopy(root), attacker(a), limits(lim) {}
-};
+ThreatSolver::SearchContext::SearchContext(const Board& root,
+                                           Player a,
+                                           const ThreatSearchLimits& lim)
+    : boardCopy(root), attacker(a), limits(lim) {}
 
 //------------------------------------------------------------------------------
 // ThreatSolver: construction / sync
@@ -148,6 +143,10 @@ void ThreatSolver::syncFromBoard(const Board& board) {
     rebuildRotatedBitboards(board);
     rebuildThreatBoard();
 }
+
+void ThreatSolver::notifyMove(const Move& move) { onRootMoveMade(move); }
+
+void ThreatSolver::notifyUndo(const Move& move) { onRootMoveUndone(move); }
 
 void ThreatSolver::onRootMoveMade(const Move& m) {
     if (!rootBoard_) return;
@@ -218,6 +217,12 @@ bool ThreatSolver::findWinningThreatSequence(Player attacker,
     return runWinningThreatSearch(attacker, outSequence, limits);
 }
 
+ThreatSolver::ThreatSolver(const ThreatSolver& other) = default;
+ThreatSolver& ThreatSolver::operator=(const ThreatSolver& other) = default;
+ThreatSolver::ThreatSolver(ThreatSolver&& other) noexcept = default;
+ThreatSolver& ThreatSolver::operator=(ThreatSolver&& other) noexcept = default;
+ThreatSolver::~ThreatSolver() = default;
+
 DefensiveSet ThreatSolver::computeDefensiveSet(Player defender,
                                                const ThreatSearchLimits& limits) const {
     return runDefensiveSetSearch(defender, limits);
@@ -252,12 +257,8 @@ void ThreatSolver::collectCurrentForcingThreats(Player player,
         if (isImmediateWinningMove(tmp, m, player)) {
             ThreatInstance t;
             t.type  = ThreatType::Five;
-            t.owner = player;
-            t.stonesCount = 0;
-            t.requiredEmptyCount = 0;
-            t.defenseCount = 0;
-            t.finishingCount = 1;
-            t.finishing[0] = m;
+            t.attacker = player;
+            t.finishingMoves.push_back(m);
             out.push_back(t);
         }
     }
@@ -307,9 +308,8 @@ bool ThreatSolver::runWinningThreatSearch(Player attacker,
             ThreatSequence seq;
             ThreatInstance t;
             t.type  = ThreatType::Five;
-            t.owner = attacker;
-            t.finishing[0] = m;
-            t.finishingCount = 1;
+            t.attacker = attacker;
+            t.finishingMoves.push_back(m);
             seq.threats.push_back(t);
             seq.attackerMoves.push_back(m);
             outSeq = std::move(seq);
