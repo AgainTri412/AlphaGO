@@ -1,23 +1,20 @@
-#ifndef GOMOKU_SEARCH_EVALUATOR_H
-#define GOMOKU_SEARCH_EVALUATOR_H
+#pragma once
 
 #include "core/board.h"
 #include "search/search_types.h"
 
 namespace gomoku {
 
-// Abstract interface for evaluation strategies.
+// Interface for static evaluation. Implementations should not modify the board.
+// Scores must be returned from the perspective of maxPlayer (positive = good for maxPlayer).
+// Implementations may keep internal caches; they must remain valid for the lifetime of
+// the IEvaluator instance and are not required to be thread-safe.
 class IEvaluator {
 public:
     virtual ~IEvaluator() = default;
 
-    // The evaluation must be:
-    //   * Fast (called at leaf nodes and sometimes in quiescence).
-    //   * Side-aware: score is always from the perspective of "maximizing" side.
-    //   * maxPlayer: The player for whom positive scores are favorable.
     virtual EvalScore evaluate(const Board& board, Player maxPlayer) = 0;
 };
 
 } // namespace gomoku
 
-#endif // GOMOKU_SEARCH_EVALUATOR_H

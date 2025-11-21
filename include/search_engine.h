@@ -1,67 +1,56 @@
-#ifndef GOMOKU_SEARCH_ENGINE_H
-#define GOMOKU_SEARCH_ENGINE_H
+#pragma once
+
+#include <vector>
 
 #include "core/board.h"
-#include "search/search_types.h"
 #include "search/evaluator.h"
-#include "search/transposition_table.h"
-#include "search/time_manager.h"
 #include "search/history_heuristic.h"
-#include "tactics/threat_solver.h"
+#include "search/search_types.h"
+#include "search/time_manager.h"
+#include "search/transposition_table.h"
+#include "tactics/ithreat_solver.h"
 
 namespace gomoku {
 
-// The SearchEngine owns the search state for a single game.
-// It orchestrates PVS, Time Management, and Tactical solvers.
+// Main search orchestrator. Non-owning pointers expect valid lifetimes for the
+// duration of the SearchEngine instance. Not thread-safe.
 class SearchEngine {
 public:
-    // SearchEngine constructor (Dependency Injection).
-    // Dependencies (evaluator, threatSolver, history) must outlive SearchEngine.
-    SearchEngine(Board&             board,
-                 IEvaluator&        evaluator,
+    SearchEngine(Board& board,
+                 IEvaluator& evaluator,
                  IThreatSolver* threatSolver,
                  IHistoryHeuristic* historyHeuristic);
 
-    // Compute the best move within limits.
+    // Entry point for a full search. Scores are root-side-to-move relative.
     SearchResult searchBestMove(const SearchLimits& limits);
-
     const SearchResult& getLastSearchResult() const { return lastResult_; }
 
     void clearTranspositionTable() { tt_.clear(); }
 
 private:
-    // --- Core Search ---
-    // Returns score from the perspective of rootSideToMove at the start of the search
     EvalScore search(int depth, EvalScore alpha, EvalScore beta, int ply, bool allowNull, bool inPV);
-    // Returns score from the perspective of rootSideToMove at the start of the search
     EvalScore quiescence(EvalScore alpha, EvalScore beta, int ply);
-    void iterativeDeepening();
+    void      iterativeDeepening();
 
-    // --- Helpers ---
-    bool canDoNullMove(const ThreatAnalysis& threatInfo, int depth, int ply) const;
+    bool      canDoNullMove(const ThreatAnalysis& threatInfo, int depth, int ply) const;
     EvalScore nullMoveSearch(EvalScore alpha, EvalScore beta, int depth, int ply);
-    void extractPrincipalVariation(std::vector<Move>& outPV, int maxDepth);
+    void      extractPrincipalVariation(std::vector<Move>& outPV, int maxDepth);
 
-    // --- Dependencies ---
     Board&             board_;
     IEvaluator&        evaluator_;
-    IThreatSolver* threatSolver_;
-    IHistoryHeuristic* history_;
+    IThreatSolver*     threatSolver_;  // optional, may be nullptr when no threat search
+    IHistoryHeuristic* history_;       // optional; when null, history ordering is disabled
 
-    // --- Internal Components ---
     TranspositionTable tt_;
     TimeManager        timeManager_;
 
-    // --- Search State ---
-    Player             rootSide_;
-    SearchResult       lastResult_;
-    
-    // Statistics counters (cleared per search)
-    std::uint64_t      nodes_ = 0;
-    std::uint64_t      qnodes_ = 0;
-    std::uint64_t      hashHits_ = 0;
+    Player       rootSide_ = Player::Black;
+    SearchResult lastResult_{};
+
+    std::uint64_t nodes_ = 0;
+    std::uint64_t qnodes_ = 0;
+    std::uint64_t hashHits_ = 0;
 };
 
 } // namespace gomoku
 
-#endif // GOMOKU_SEARCH_ENGINE_H
