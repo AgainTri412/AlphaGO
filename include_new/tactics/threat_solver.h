@@ -34,28 +34,28 @@ struct ThreatInstance {
     ThreatType type = ThreatType::None;
     Player     attacker = Player::Black;
     Direction  direction = Direction::Horizontal;
-    std::vector<Move> stones;
-    std::vector<Move> requiredEmpty;
-    std::vector<Move> defensePoints;
-    std::vector<Move> finishingMoves;
+    std::vector<Move> stones;          // occupied points for attacker
+    std::vector<Move> requiredEmpty;   // empties that must stay open
+    std::vector<Move> defensePoints;   // defender moves that break the threat
+    std::vector<Move> finishingMoves;  // attacker moves that realize the threat
 };
 
 struct ThreatSequence {
     Player attacker = Player::Black;
     std::vector<ThreatInstance> threats;
-    std::vector<Move> attackerMoves;
-    std::vector<Move> defenderMoves;
+    std::vector<Move> attackerMoves; // ordered attacker path leading to win
+    std::vector<Move> defenderMoves; // matching defenses (may be empty on forced win)
 };
 
 struct DefensiveSet {
-    bool              isLost = false;
-    std::vector<Move> defensiveMoves;
+    bool              isLost = false;   // true when no defense exists
+    std::vector<Move> defensiveMoves;   // empty when lost
 };
 
 struct ThreatSearchLimits {
     int         maxNodes = 200000;
     int         maxDepth = 20;
-    const bool* abortFlag = nullptr; // non-owning
+    const bool* abortFlag = nullptr; // optional external stop flag; non-owning
 };
 
 // Concrete threat solver using PIMPL to hide heavy implementation details.
@@ -63,16 +63,19 @@ class ThreatSolver : public IThreatSolver {
 public:
     explicit ThreatSolver(const Board& board);
 
+    // Full sync against Board (useful after setup or deserialization).
     void syncFromBoard(const Board& board);
     void notifyMove(const Move& move) override;
     void notifyUndo(const Move& move) override;
 
     ThreatAnalysis analyzeThreats(const Board& board, Player attacker) override;
 
+    // Returns true and fills outSequence when a winning forcing line is found for attacker.
     bool findWinningThreatSequence(Player attacker,
                                    ThreatSequence& outSequence,
                                    const ThreatSearchLimits& limits = {}) const;
 
+    // Computes all safe defensive moves for defender; marks isLost when none exist.
     DefensiveSet computeDefensiveSet(Player defender,
                                      const ThreatSearchLimits& limits = {}) const;
 

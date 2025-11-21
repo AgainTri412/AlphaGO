@@ -4,7 +4,8 @@
 
 namespace gomoku {
 
-// Interface for history heuristic; tracks move-ordering scores.
+// Interface for history heuristic; tracks move-ordering scores. Implementations
+// are non-owning and not thread-safe.
 class IHistoryHeuristic {
 public:
     virtual ~IHistoryHeuristic() = default;

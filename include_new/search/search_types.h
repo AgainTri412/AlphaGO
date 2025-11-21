@@ -10,25 +10,25 @@ namespace gomoku {
 
 using EvalScore = int;
 static constexpr EvalScore kInfinity  = std::numeric_limits<EvalScore>::max() / 4;
-static constexpr EvalScore kMateScore = kInfinity - 1000; // used for immediate wins
+static constexpr EvalScore kMateScore = kInfinity - 1000; // used for immediate wins (root-relative)
 static constexpr EvalScore kDrawScore = 0;
 
 struct SearchLimits {
-    int           maxDepth = 32;
-    std::uint64_t maxNodes = 0; // 0 = unlimited
-    std::uint64_t timeLimitMs = 1000;
-    std::uint64_t panicExtraTimeMs = 300;
+    int           maxDepth = 32;          // plies
+    std::uint64_t maxNodes = 0;           // 0 = unlimited
+    std::uint64_t timeLimitMs = 1000;     // hard cap per search
+    std::uint64_t panicExtraTimeMs = 300; // extra time when close to timeout
     bool          enableNullMove = true;
     bool          enablePanicMode = true;
 };
 
 struct SearchResult {
-    Move       bestMove;
+    Move       bestMove{};
     EvalScore  bestScore = 0; // always from the perspective of rootSideToMove at search start
     int        depthReached = 0;
-    bool       isMate = false;
+    bool       isMate = false;   // true when score corresponds to forced mate
     bool       isTimeout = false;
-    bool       isForcedWin = false;
+    bool       isForcedWin = false; // set when found via threat solver
 
     std::vector<Move> principalVariation;
 

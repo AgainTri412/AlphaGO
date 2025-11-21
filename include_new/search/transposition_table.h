@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -14,19 +15,22 @@ struct TTEntry {
     std::uint64_t key = 0;
     EvalScore     value = 0; // root-relative score for stored node
     EvalScore     eval = 0;  // static eval at storage time (root-relative)
-    int           depth = -1;
+    int           depth = -1; // remaining depth from the node where this entry was stored
     TTNodeType    type = TTNodeType::Exact;
-    Move          bestMove;
+    Move          bestMove{};
 };
 
+// Fixed-size replacement transposition table. Not thread-safe.
 class TranspositionTable {
 public:
-    explicit TranspositionTable(std::size_t size = 1 << 20);
+    explicit TranspositionTable(std::size_t size = 1u << 20); // size = number of entries
 
     void clear();
 
+    // Returns a pointer to the slot for the given key (may contain unrelated data).
     TTEntry* probe(std::uint64_t key);
 
+    // Stores/overwrites the slot for key using depth-preferred replacement.
     void store(std::uint64_t key,
                EvalScore     value,
                EvalScore     eval,
@@ -34,6 +38,7 @@ public:
                TTNodeType    type,
                const Move&   bestMove);
 
+    // Encodes mate scores with ply distance to remain comparable across depths.
     static EvalScore toTTScore(EvalScore score, int plyFromRoot);
     static EvalScore fromTTScore(EvalScore score, int plyFromRoot);
 

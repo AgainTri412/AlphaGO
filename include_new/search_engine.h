@@ -1,15 +1,19 @@
 #pragma once
 
+#include <vector>
+
 #include "core/board.h"
-#include "search/search_types.h"
 #include "search/evaluator.h"
-#include "search/transposition_table.h"
-#include "search/time_manager.h"
 #include "search/history_heuristic.h"
+#include "search/search_types.h"
+#include "search/time_manager.h"
+#include "search/transposition_table.h"
 #include "tactics/ithreat_solver.h"
 
 namespace gomoku {
 
+// Main search orchestrator. Non-owning pointers expect valid lifetimes for the
+// duration of the SearchEngine instance. Not thread-safe.
 class SearchEngine {
 public:
     SearchEngine(Board& board,
@@ -17,6 +21,7 @@ public:
                  IThreatSolver* threatSolver,
                  IHistoryHeuristic* historyHeuristic);
 
+    // Entry point for a full search. Scores are root-side-to-move relative.
     SearchResult searchBestMove(const SearchLimits& limits);
     const SearchResult& getLastSearchResult() const { return lastResult_; }
 
@@ -33,8 +38,8 @@ private:
 
     Board&             board_;
     IEvaluator&        evaluator_;
-    IThreatSolver*     threatSolver_;
-    IHistoryHeuristic* history_;
+    IThreatSolver*     threatSolver_;  // optional, may be nullptr when no threat search
+    IHistoryHeuristic* history_;       // optional; when null, history ordering is disabled
 
     TranspositionTable tt_;
     TimeManager        timeManager_;
