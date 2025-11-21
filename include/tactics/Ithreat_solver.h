@@ -1,42 +1,29 @@
-#ifndef GOMOKU_TACTICS_THREAT_SOLVER_H
-#define GOMOKU_TACTICS_THREAT_SOLVER_H
+#pragma once
 
 #include <vector>
-#include "core/board.h"
 
-// Abstract threat solver API.
+#include "core/board.h"
 
 namespace gomoku {
 
 struct ThreatAnalysis {
-    // If true, 'attacker' has a forcing winning sequence assuming optimal defense.
     bool attackerHasForcedWin = false;
-
-    // First move of a winning threat sequence for the attacker.
-    Move firstWinningMove;
-
-    // Optional: entire sequence of moves in the winning line.
-    std::vector<Move> winningLine;
-
-    // The set of defender moves that *jointly* defend against all threat sequences.
-    std::vector<Move> defensiveMoves;
+    Move firstWinningMove{};
+    std::vector<Move> winningLine;   // attacker-first sequence when forced win exists
+    std::vector<Move> defensiveMoves; // safe defenses when no forced win; empty if lost
 };
 
-// Abstract threat solver API.
+// Interface for threat search. Does not own the board; not thread-safe.
 class IThreatSolver {
 public:
     virtual ~IThreatSolver() = default;
 
-    // Analyze threats for 'attacker' on the given board.
-    // Must NOT modify 'board'.
+    // Analyzes threats for attacker on the given board (board should match internal state).
     virtual ThreatAnalysis analyzeThreats(const Board& board, Player attacker) = 0;
-
-    // Incremental state updates.
+    // Incremental update hooks to keep internal rotated bitboards in sync with Board.
     virtual void notifyMove(const Move& move) = 0;
     virtual void notifyUndo(const Move& move) = 0;
-};
 };
 
 } // namespace gomoku
 
-#endif // GOMOKU_TACTICS_THREAT_SOLVER_H

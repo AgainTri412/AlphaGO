@@ -1,39 +1,36 @@
-#ifndef GOMOKU_SEARCH_TRANSPOSITION_TABLE_H
-#define GOMOKU_SEARCH_TRANSPOSITION_TABLE_H
+#pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
+
 #include "core/board.h"
 #include "search/search_types.h"
 
 namespace gomoku {
 
-enum class TTNodeType : std::uint8_t {
-    Exact,       // Exact score.
-    LowerBound,  // alpha-beta lower bound (score >= value).
-    UpperBound   // alpha-beta upper bound (score <= value).
-};
+enum class TTNodeType : std::uint8_t { Exact, LowerBound, UpperBound };
 
 struct TTEntry {
     std::uint64_t key = 0;
-    EvalScore     value = 0; // from the perspective of rootSideToMove at the start of the search
-    EvalScore     eval = 0;  // from the perspective of rootSideToMove at the start of the search
-    int           depth = -1;
+    EvalScore     value = 0; // root-relative score for stored node
+    EvalScore     eval = 0;  // static eval at storage time (root-relative)
+    int           depth = -1; // remaining depth from the node where this entry was stored
     TTNodeType    type = TTNodeType::Exact;
-    Move          bestMove;
+    Move          bestMove{};
 };
 
+// Fixed-size replacement transposition table. Not thread-safe.
 class TranspositionTable {
 public:
-    // Initialize with a default size (e.g., 2^20 entries).
-    explicit TranspositionTable(std::size_t size = 1048576);
+    explicit TranspositionTable(std::size_t size = 1u << 20); // size = number of entries
 
     void clear();
 
-    // Retrieve an entry. Returns nullptr if key doesn't match or empty.
+    // Returns a pointer to the slot for the given key (may contain unrelated data).
     TTEntry* probe(std::uint64_t key);
 
-    // Store an entry using replacement policy.
+    // Stores/overwrites the slot for key using depth-preferred replacement.
     void store(std::uint64_t key,
                EvalScore     value,
                EvalScore     eval,
@@ -41,7 +38,7 @@ public:
                TTNodeType    type,
                const Move&   bestMove);
 
-    // Normalize mate scores relative to root ply.
+    // Encodes mate scores with ply distance to remain comparable across depths.
     static EvalScore toTTScore(EvalScore score, int plyFromRoot);
     static EvalScore fromTTScore(EvalScore score, int plyFromRoot);
 
@@ -51,4 +48,3 @@ private:
 
 } // namespace gomoku
 
-#endif // GOMOKU_SEARCH_TRANSPOSITION_TABLE_H

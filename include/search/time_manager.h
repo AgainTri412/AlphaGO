@@ -1,35 +1,31 @@
-#ifndef GOMOKU_SEARCH_TIME_MANAGER_H
-#define GOMOKU_SEARCH_TIME_MANAGER_H
+#pragma once
 
 #include <chrono>
 #include <cstdint>
+
 #include "search/search_types.h"
 
 namespace gomoku {
 
+// Simple per-search time manager. Not thread-safe.
 class TimeManager {
 public:
     using Clock = std::chrono::steady_clock;
 
-    // Initialize with limits for a new search.
+    // Starts a new timer using the provided limits; resets internal stop flag.
     void start(const SearchLimits& limits);
-
-    // Check if search should stop.
-    // updates internal stop flag.
-    // @param nodesVisited: accumulated nodes + qnodes.
-    // @param inPanic: if true, uses panicExtraTimeMs.
+    // Returns true when time/node budget suggests aborting search. inPanic allows
+    // tighter limits after the main deadline passes.
     bool checkStopCondition(std::uint64_t nodesVisited, bool inPanic = false);
 
-    bool isStopped() const { return stop_; }
-    
+    bool        isStopped() const { return stop_; }
     std::uint64_t elapsedMs() const;
 
 private:
-    Clock::time_point startTime_;
-    SearchLimits      limits_;
+    Clock::time_point startTime_{};
+    SearchLimits      limits_{};
     bool              stop_ = false;
 };
 
 } // namespace gomoku
 
-#endif // GOMOKU_SEARCH_TIME_MANAGER_H

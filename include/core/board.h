@@ -1,128 +1,89 @@
-// board.h
-// Gomoku board representation using bitboards.
-
-#ifndef GOMOKU_BOARD_H
-#define GOMOKU_BOARD_H
+#pragma once
 
 #include <cstdint>
 #include <vector>
 
 namespace gomoku {
 
-// Representation of the two possible players.
-enum class Player {
-    Black = 0,
-    White = 1
-};
+// Board constants for compile-time sizing and bounds checks.
+static constexpr int kBoardSize = 12;
+static constexpr int kBoardCells = kBoardSize * kBoardSize;
 
-// Simple struct to hold a move coordinate.
+// Represents the two possible players.
+enum class Player { Black = 0, White = 1 };
+
+// Coordinate-based move (0 <= x,y < kBoardSize).
 struct Move {
-    int x;
-    int y;
-    Move(int px = 0, int py = 0) : x(px), y(py) {}
+    int x = 0;
+    int y = 0;
 
-    // Order by (x,y) so we can sort
+    bool operator==(const Move& other) const { return x == other.x && y == other.y; }
     bool operator<(const Move& other) const {
-        if (x != other.x) return x < other.x;
-        return y < other.y;
-    }
-
-    bool operator==(const Move& other) const {
-        return x == other.x && y == other.y;
+        return (x < other.x) || (x == other.x && y < other.y);
     }
 };
 
-// Represents a 12×12 Gomoku board using bitboards.
+// 12x12 board representation using bitboards and incremental Zobrist hashing.
+// Public API is intentionally minimal: Board owns all state and provides
+// side-effectful make/unmake plus read-only queries. Not thread-safe.
 class Board {
 public:
-    // Construct a fresh board with the predetermined opening stones.
     Board();
 
-    // Return true if the cell at (x,y) is occupied by any stone.
+    // Basic cell queries -----------------------------------------------------
+    // Returns true if the cell is occupied by either color; bounds must be valid.
     bool isOccupied(int x, int y) const;
+    // 0 = empty, 1 = black, 2 = white; bounds must be valid.
+    int  getCellState(int x, int y) const;
 
-     // Returns the player whose turn it is to move.
-    Player sideToMove() const { return side_to_move; }
+    // Move management --------------------------------------------------------
+    Player sideToMove() const { return side_to_move_; }
+    // Places a stone for sideToMove() at (x,y), toggles the side, updates hash.
+    // Returns false if the move is illegal (out of bounds or occupied).
+    bool   makeMove(int x, int y);
+    // Removes the stone placed by makeMove at (x,y), toggles the side back,
+    // restores hash. Assumes (x,y) was the last move made by the opposite side.
+    bool   unmakeMove(int x, int y);
 
-    // Attempt to place a stone at (x,y) for the current player.
-    // Returns false if the move was illegal (cell already occupied).
-    bool makeMove(int x, int y);
-
-    // Undo the last move at (x,y).  This will revert side_to_move to the
-    // player who originally played at (x,y) and clear the stone at that
-    // location.  It assumes that the cell currently contains a stone of
-    // the opponent of side_to_move (i.e., the last move made).  Always
-    // returns true.
-    bool unmakeMove(int x, int y);
-
-    // Check whether the specified player currently has five in a row.
-    bool checkWin(Player player) const;
-
-    // Get a list of legal (empty) positions on the board.
+    // Move generation helpers ------------------------------------------------
+    // Returns all legal moves (typically all empty cells).
     std::vector<Move> getLegalMoves() const;
-
-    // Generate candidate moves within a bounding box around existing stones.
-    // This function is intended for use by the search engine.  It limits
-    // move generation to locations close to the action (within a margin of
-    // two cells of any existing stone) and ignores cells that have no
-    // neighboring stones.  If the board is empty (no stones), it will
-    // return the central location (5,5) as the only candidate.
+    // Returns proximity-limited candidates for move ordering.
     std::vector<Move> getCandidateMoves() const;
 
-    // Return a code describing the occupant of the cell at (x,y):
-    // 0 = empty, 1 = black, 2 = white.  This helper is mainly for
-    // evaluation purposes.
-    int getCellState(int x, int y) const;
+    // Game state utilities ---------------------------------------------------
+    // Checks whether the specified player has a five-in-a-row.
+    bool checkWin(Player player) const;
+    int  countStones(Player player) const;
 
-    // Utility to count how many stones a player has on the board.
-    int countStones(Player player) const;
+    // Zobrist hashing --------------------------------------------------------
+    uint64_t getHashKey() const { return hashKey_; }
 
-    // Return the Zobrist hash key for the current position.  This value
-    // uniquely represents the state of the board (including side to move) and
-    // can be used by transposition tables.  It is updated incrementally as
-    // moves are made and undone, and remains consistent after any public
-    // mutator that changes the board contents or side to move
-    // (makeMove, unmakeMove, placeStone, removeStone, setSideToMove).
-    uint64_t getHashKey() const { return hashKey; }
-
-    //Helper functions:
-    Player getSideToMove() const;//Inspect current side (legacy alias; prefer sideToMove() in new code)
-    void setSideToMove(Player p);//Force a specific side to move; maintains the Zobrist hash key. setup only, not for search
-    bool placeStone(int x, int y, Player player);//Place a stone for a specific Player without toggling turn; maintains the Zobrist hash key
-    bool removeStone(int x, int y, Player player);//Place a stone for a specific Player without toggling turn; maintains the Zobrist hash key
+    // Legacy setup utilities (use sparingly; keep hash consistent) -----------
+    Player getSideToMove() const { return side_to_move_; }
+    void   setSideToMove(Player p);
+    // Direct stone placement/removal for setup; caller must avoid conflicts and
+    // keep hashing consistent with side_to_move_.
+    bool   placeStone(int x, int y, Player player);
+    bool   removeStone(int x, int y, Player player);
 
 private:
-    // Convert a pair (x,y) into an index 0..143.
-    static inline int index(int x, int y) { return y * 12 + x; }
-
-    // Convert index into chunk 0..2 and bit offset 0..63.
+    static inline int index(int x, int y) { return y * kBoardSize + x; }
     static inline int chunkOf(int idx) { return idx >> 6; }
     static inline int offsetOf(int idx) { return idx & 63; }
 
-    // Bitboards for black and white. bb[player][chunk] holds bits for that player.
-    uint64_t bb[2][3];
+    uint64_t bb_[2][3];
+    Player   side_to_move_;
 
-    // The player who will make the next move.
-    Player side_to_move;
+    // Zobrist tables (lazily initialized) -----------------------------------
+    static bool     zobristInitialized_;
+    static uint64_t zobristTable_[kBoardSize][kBoardSize][2];
+    static uint64_t zobristSide_;
 
-    // --- Zobrist hashing support ---
-    // Static tables storing random 64‑bit numbers for each board cell and player.
-    // These are initialized on first construction of a Board via initZobrist().
-    static bool zobristInitialized;
-    static uint64_t zobristTable[12][12][2];
-    static uint64_t zobristSide;
+    uint64_t hashKey_;
 
-    // The current position's Zobrist hash key.  It is maintained
-    // incrementally and remains consistent after all public mutators that
-    // change the board contents or side to move (makeMove, unmakeMove,
-    // placeStone, removeStone, setSideToMove).
-    uint64_t hashKey;
-
-    // Initialize Zobrist tables with random numbers.  Called lazily by the
-    // constructor to ensure proper seeding.
     static void initZobrist();
 };
 
 } // namespace gomoku
 
-#endif // GOMOKU_BOARD_H
